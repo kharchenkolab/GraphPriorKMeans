@@ -12,20 +12,20 @@ split_ids(factor::Vector{Int}; kwargs...) = split(1:length(factor), factor; kwar
 
 function split(
         array::AbstractVector{TV}, factor::AbstractVector{<:Union{<:Integer, Missing}};
-        max_factor::Union{Int, Nothing}=nothing, drop_zero::Bool=false
+        max_factor::Union{Int, Nothing}=nothing
     )::Array{Vector{TV}, 1} where TV
     @assert length(array) == length(factor)
     if max_factor === nothing
         max_factor = maximum(skipmissing(factor))
     end
 
-    counts = count_array(factor; max_value=max_factor, drop_zero=drop_zero)
+    counts = count_array(factor; max_value=max_factor)
     splitted = [Vector{TV}(undef, c) for c in counts]
     last_id = zeros(Int, max_factor)
 
     for i in eachindex(array)
         fac = factor[i]
-        (ismissing(fac) || (drop_zero && fac == 0)) && continue
+        ismissing(fac) && continue
 
         li = (last_id[fac] += 1)
         splitted[fac][li] = array[i]
@@ -51,6 +51,24 @@ function count_array!(
 
     for v in values
         counts[v] += 1
+    end
+
+    return counts
+end
+
+function count_array!(
+        counts::VT1 where VT1 <: AbstractVector{RT}, values::VT2 where VT2 <: AbstractVector{<:Integer},
+        weights::VT3 where VT3 <: AbstractVector{RT};
+        erase_counts::Bool=true
+    ) where RT<:Real
+    if erase_counts
+        counts .= 0
+    end
+
+    has_zero = false
+    for i in eachindex(values)
+        v = values[i]
+        counts[v] += weights[i]
     end
 
     return counts
